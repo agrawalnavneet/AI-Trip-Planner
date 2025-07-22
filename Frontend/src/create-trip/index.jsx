@@ -11,7 +11,8 @@ function CreateTrip() {
         Just provide some basic information, and our trip planner will create a personalized travel plan for you—tailored to your interests, budget, and schedule.
       </p>
 
-      <div className='mt-20'>
+      <div className='mt-20 flex flex-col gap-10'>
+        <div >
         <h2 className='text-xl my-2 font-medium'>What is your destination of choice?</h2>
         <GooglePlacesAutocomplete
           apiKey={import.meta.env.VITE_GOOGLE_API_KEY}
@@ -23,7 +24,14 @@ function CreateTrip() {
             },
           }}
         />
-      </div>
+      </div></div>
+
+<div>
+          <h2 className='text-xl my-2 font-medium'>How many days do you want to spend on this trip?</h2>
+          <input placeholder={'Ex.3'} type="number" className='border-2 border-gray-300 rounded-md p-2 w-full' />
+</div>
+
+
     </div>
   );
 }
