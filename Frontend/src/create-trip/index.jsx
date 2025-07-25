@@ -11,6 +11,11 @@ function CreateTrip() {
   const [place, setPlace] = useState();
 const[formData,setformData]=useState([]);
 const handleInputChange =(name,value )=>{
+  // if(name==='noOfDays' && value>5){
+  //   console.log('You can only select a maximum of 5 days');
+  //   return;
+  // }
+  
   setformData({
     ...formData,
     [name]:value
@@ -20,8 +25,13 @@ useEffect(() => {
   console.log(formData);
 }, [formData]);
 
-
-
+const OnGenerateTrip = () => {
+  if (formData?.noOfDays > 5) {
+    alert("You can only select a maximum of 5 days");
+    return;
+  }
+  console.log(formData);
+};
 
   return (
     <div className='sm:px-10 md:px-32 lg:px-56 xl:px-10 px-5 mt-10'>
@@ -33,7 +43,7 @@ useEffect(() => {
       <div className='mt-20 flex flex-col gap-10'>
         <div>
           <h2 className='text-xl my-2 font-medium'>What is your destination of choice?</h2>
-          <GooglePlacesAutocomplete
+          {/* <GooglePlacesAutocomplete
             apiKey={import.meta.env.VITE_GOOGLE_API_KEY}
             selectProps={{
               value: place,
@@ -42,7 +52,19 @@ useEffect(() => {
                 console.log(v);
               },
             }}
-          />
+          /> */}
+
+          <GooglePlacesAutocomplete
+  apiKey={import.meta.env.VITE_GOOGLE_API_KEY}
+  selectProps={{
+    value: place,
+    onChange: (v) => {
+      setPlace(v);
+      handleInputChange('destination', v.label || v.value?.description); // ✅ this line adds location to formData
+      console.log(v);
+    },
+  }}
+/>
         </div>
 
         <div>
@@ -62,7 +84,11 @@ useEffect(() => {
               <div
                 key={index} 
                 onClick={() => handleInputChange('budget', item.title)}
-                className='p-4 border cursor-pointer rounded-lg hover:shadow-lg'>
+                className={`p-4 border cursor-pointer rounded-lg hover:shadow-lg
+                  
+                ${formData?.budget==item.title&& 'shadow-lg border-black'}
+                  
+                  `}>
                 <h2 className='text-4xl'>{item.icon}</h2>
                 <h2 className='font-bold text-lg'>{item.title}</h2>
                 <h2 className='text-sm text-gray-500'>{item.desc}</h2>
@@ -79,7 +105,12 @@ useEffect(() => {
               <div
                 key={index} 
                 onClick={() => handleInputChange('traveller', item.people)}
-                className='p-4 border cursor-pointer rounded-lg hover:shadow-lg'>
+                className={`p-4 border cursor-pointer rounded-lg hover:shadow-lg
+                
+                
+                ${formData?.traveller==item.people && 'shadow-lg border-black'}
+                
+                `}>
                 <h2 className='text-4xl'>{item.icon}</h2>
                 <h2 className='font-bold text-lg'>{item.title}</h2>
                 <h2 className='text-sm text-gray-500'>{item.desc}</h2>
@@ -90,7 +121,7 @@ useEffect(() => {
       </div>
 
       <div className='mt-10 mb-10 justify-end flex'>
-      <Button> 
+      <Button onClick={OnGenerateTrip} className='bg-[#f56551] text-white'> 
         Generate Trip</Button>
          </div>
     </div>
