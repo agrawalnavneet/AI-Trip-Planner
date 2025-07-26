@@ -2,8 +2,8 @@ import React, { useState,useEffect } from 'react';
 import { Button } from "@/components/ui/Button"; // if file is Button.jsx
 import { Input } from "@/components/ui/Input"; // if file is Input.
 import GooglePlacesAutocomplete from 'react-google-places-autocomplete';
-import { SelectBugetOption, SelectTravel } from '@/constant/options';
-
+import { AI_PROMPT, SelectBugetOption, SelectTravel } from '@/constant/options';
+import { toast } from "sonner";
 
 
 // Assuming you have this component
@@ -25,13 +25,48 @@ useEffect(() => {
   console.log(formData);
 }, [formData]);
 
-const OnGenerateTrip = () => {
-  if (formData?.noOfDays > 5) {
-    alert("You can only select a maximum of 5 days");
+// const OnGenerateTrip = () => {
+//   if (formData?.noOfDays > 5 && !formData?.location || !formData?.budget || !formData?.traveller) {
+//     alert("You can only select a maximum of 5 days");
+//     toast("Please fill all the details.")
+//     return;
+//   }
+//   console.log(formData);
+// };
+const OnGenerateTrip = async() => {
+ if (
+  formData?.noOfDays > 5 ||
+  !formData?.destination ||  
+  !formData?.budget ||
+  !formData?.traveller
+) {
+  toast("Please fill all the details.");
+  return;
+}
+
+
+  if (formData.noOfDays > 5) {
+    alert("You can only select a maximum of 5 days.");
     return;
   }
-  console.log(formData);
+
+  // console.log(formData);
+
+  const Final_Prompt=AI_PROMPT
+  .replace('{location}', formData?.location?.label)
+  .replace('{totalDays}', formData?.noOfDays)
+  .replace('{traveller}', formData?.traveller)
+  .replace('{budget}', formData?.budget)
+  .replace('{totalDays}', formData?.noOfDays);
+  console.log(Final_Prompt);
+
+const result=await chatSession.sendMessage(Final_Prompt);
+
+console.log(result?.response?.text());
+
+
 };
+
 
   return (
     <div className='sm:px-10 md:px-32 lg:px-56 xl:px-10 px-5 mt-10'>
