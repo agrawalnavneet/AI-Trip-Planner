@@ -1,20 +1,28 @@
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button"; // ✅ fixed lowercase import
 import GooglePlacesAutocomplete from "react-google-places-autocomplete";
 import { AI_PROMPT, SelectBugetOption, SelectTravel } from "@/constant/options";
 import { toast } from "sonner";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { FcGoogle } from "react-icons/fc";
+import { useGoogleLogin } from "@react-oauth/google";
 function CreateTrip() {
   const [place, setPlace] = useState();
   const [formData, setFormData] = useState({});
+  const [openDialog, setOpenDialog] = useState(false);
   const [tripPlan, setTripPlan] = useState(null);
   const [loading, setLoading] = useState(false);
 
   // ✅ Gemini setup (flash model)
-  const genAI = new GoogleGenerativeAI(
-    import.meta.env.VITE_GEMINI_API_KEY
-  );
+  const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const handleInputChange = (name, value) => {
@@ -27,8 +35,20 @@ function CreateTrip() {
   useEffect(() => {
     console.log("Form Data:", formData);
   }, [formData]);
-
+const login=useGoogleLogin({
+  onSuccess:(codeResp)=>console.log(codeResp),
+  onError:(error)=>console.log(error)
+})
   const OnGenerateTrip = async () => {
+    const user = localStorage.removeItem("user")
+
+
+    // ✅ Show login dialog if user not found
+    if (!user) {
+      setOpenDialog(true);
+      return;
+    }
+
     if (loading) return; // ⛔ prevent spamming
     setLoading(true);
 
@@ -77,9 +97,7 @@ function CreateTrip() {
 
   return (
     <div className="sm:px-10 md:px-32 lg:px-56 xl:px-10 px-5 mt-10">
-      <h2 className="font-bold text-3xl">
-        Customize your travel experience 🏕️🌴
-      </h2>
+      <h2 className="font-bold text-3xl">Customize your travel experience 🏕️🌴</h2>
       <p className="mt-3 text-gray-500 text-xl">
         Just provide some basic information, and our trip planner will create a
         personalized travel plan for you—tailored to your interests, budget, and
@@ -136,9 +154,9 @@ function CreateTrip() {
               <div
                 key={index}
                 onClick={() => handleInputChange("budget", item.title)}
-                className={`p-4 border cursor-pointer rounded-lg hover:shadow-lg
-                  ${formData?.budget === item.title && "shadow-lg border-black"}
-                `}
+                className={`p-4 border cursor-pointer rounded-lg hover:shadow-lg ${
+                  formData?.budget === item.title && "shadow-lg border-black"
+                }`}
               >
                 <h2 className="text-4xl">{item.icon}</h2>
                 <h2 className="font-bold text-lg">{item.title}</h2>
@@ -159,12 +177,10 @@ function CreateTrip() {
               <div
                 key={index}
                 onClick={() => handleInputChange("traveller", item.people)}
-                className={`p-4 border cursor-pointer rounded-lg hover:shadow-lg
-                  ${
-                    formData?.traveller === item.people &&
-                    "shadow-lg border-black"
-                  }
-                `}
+                className={`p-4 border cursor-pointer rounded-lg hover:shadow-lg ${
+                  formData?.traveller === item.people &&
+                  "shadow-lg border-black"
+                }`}
               >
                 <h2 className="text-4xl">{item.icon}</h2>
                 <h2 className="font-bold text-lg">{item.title}</h2>
@@ -188,13 +204,37 @@ function CreateTrip() {
         </Button>
       </div>
 
-      {/* Show result */}
+      {/* Show result
       {tripPlan && (
         <div className="mt-10 p-5 border rounded-lg shadow-md bg-white">
           <h2 className="font-bold text-2xl mb-3">Your Trip Plan ✈️</h2>
           <pre className="whitespace-pre-wrap text-gray-700">{tripPlan}</pre>
         </div>
-      )}
+      )} */}
+
+      {/* Login Required Dialog */}
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+
+        <DialogContent>
+        <DialogHeader>
+  <DialogTitle>Login Required</DialogTitle>
+  <DialogDescription>
+ <img src="/logo.svg" alt="Logo" />
+<h2 className="font-bold text-lg mt-7">Sign In with Google</h2>
+    You need to log in before generating your trip plan.
+  </DialogDescription>
+</DialogHeader>
+<DialogFooter>
+  <Button 
+  onClick={login}
+  className="w-full mt-5 flex gap-4 items-center">
+    <FcGoogle className='h-7 w-7' />Sign In With Google</Button>
+</DialogFooter>
+          
+           
+          
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
