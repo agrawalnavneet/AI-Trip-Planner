@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button"; // ✅ fixed lowercase import
+import { Button } from "@/components/ui/button";
 import GooglePlacesAutocomplete from "react-google-places-autocomplete";
 import { AI_PROMPT, SelectBugetOption, SelectTravel } from "@/constant/options";
 import { toast } from "sonner";
@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { FcGoogle } from "react-icons/fc";
 import { useGoogleLogin } from "@react-oauth/google";
+import axios from "axios";
+
 function CreateTrip() {
   const [place, setPlace] = useState();
   const [formData, setFormData] = useState({});
@@ -35,26 +37,56 @@ function CreateTrip() {
   useEffect(() => {
     console.log("Form Data:", formData);
   }, [formData]);
-const login=useGoogleLogin({
-  onSuccess:(codeResp)=>console.log(codeResp),
-  onError:(error)=>console.log(error)
-})
+
+  // ✅ Fetch Google Profile
+  const GetUserProfile = async (tokenInfo) => {
+    try {
+      const res = await axios.get(
+        `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${tokenInfo.access_token}`,
+        {
+          headers: {
+            Authorization: `Bearer ${tokenInfo.access_token}`,
+            Accept: "application/json",
+          },
+        }
+      );
+      console.log("User Profile:", res.data);
+      localStorage.setItem("user", JSON.stringify(res.data));
+      return res.data;
+    } catch (err) {
+      console.error("Error fetching profile:", err);
+    }
+  };
+
+  // ✅ Google Login
+  const login = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      const profile = await GetUserProfile(tokenResponse);
+      if (profile) {
+        setOpenDialog(false);
+        toast.success(`Welcome ${profile.name}!`);
+      }
+    },
+    onError: (error) => console.log("Login Failed:", error),
+    redirectUri: "http://localhost:5173", // must match Google console
+  });
+
+  // ✅ Generate Trip Plan
   const OnGenerateTrip = async () => {
-    const user = localStorage.removeItem("user")
+    const user = localStorage.getItem("user"); // ✅ fixed
 
-
-    // ✅ Show login dialog if user not found
+    // Show login dialog if user not found
     if (!user) {
       setOpenDialog(true);
       return;
     }
 
-    if (loading) return; // ⛔ prevent spamming
+    if (loading) return; // prevent spamming
     setLoading(true);
 
     if (
-      formData?.noOfDays > 5 ||
       !formData?.destination ||
+      !formData?.noOfDays ||
       !formData?.budget ||
       !formData?.traveller
     ) {
@@ -84,7 +116,6 @@ const login=useGoogleLogin({
       setTripPlan(response);
     } catch (error) {
       console.error("Error generating trip:", error);
-
       if (error.message.includes("429")) {
         toast("⚠️ Quota exceeded. Please wait a bit or upgrade your plan.");
       } else {
@@ -116,11 +147,7 @@ const login=useGoogleLogin({
               value: place,
               onChange: (v) => {
                 setPlace(v);
-                handleInputChange(
-                  "destination",
-                  v.label || v.value?.description
-                );
-                console.log(v);
+                handleInputChange("destination", v.label || v.value?.description);
               },
             }}
           />
@@ -204,35 +231,30 @@ const login=useGoogleLogin({
         </Button>
       </div>
 
-      {/* Show result
+      {/* Show result */}
       {tripPlan && (
         <div className="mt-10 p-5 border rounded-lg shadow-md bg-white">
           <h2 className="font-bold text-2xl mb-3">Your Trip Plan ✈️</h2>
           <pre className="whitespace-pre-wrap text-gray-700">{tripPlan}</pre>
         </div>
-      )} */}
+      )}
 
       {/* Login Required Dialog */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-
         <DialogContent>
-        <DialogHeader>
-  <DialogTitle>Login Required</DialogTitle>
-  <DialogDescription>
- <img src="/logo.svg" alt="Logo" />
-<h2 className="font-bold text-lg mt-7">Sign In with Google</h2>
-    You need to log in before generating your trip plan.
-  </DialogDescription>
-</DialogHeader>
-<DialogFooter>
-  <Button 
-  onClick={login}
-  className="w-full mt-5 flex gap-4 items-center">
-    <FcGoogle className='h-7 w-7' />Sign In With Google</Button>
-</DialogFooter>
-          
-           
-          
+          <DialogHeader>
+            <DialogTitle>Login Required</DialogTitle>
+            <DialogDescription>
+              <img src="/logo.svg" alt="Logo" />
+              <h2 className="font-bold text-lg mt-7">Sign In with Google</h2>
+              You need to log in before generating your trip plan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={login} className="w-full mt-5 flex gap-4 items-center">
+              <FcGoogle className="h-7 w-7" /> Sign In With Google
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
