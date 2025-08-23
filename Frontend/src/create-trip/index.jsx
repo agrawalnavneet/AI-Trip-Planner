@@ -22,6 +22,10 @@ function CreateTrip() {
   const [openDialog, setOpenDialog] = useState(false);
   const [tripPlan, setTripPlan] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(
+    JSON.parse(localStorage.getItem("user")) || null
+  );
+  const [token, setToken] = useState(localStorage.getItem("token") || null);
 
   // ✅ Gemini setup (flash model)
   const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
@@ -52,6 +56,9 @@ function CreateTrip() {
       );
       console.log("User Profile:", res.data);
       localStorage.setItem("user", JSON.stringify(res.data));
+      localStorage.setItem("token", tokenInfo.access_token);
+      setUser(res.data);
+      setToken(tokenInfo.access_token);
       return res.data;
     } catch (err) {
       console.error("Error fetching profile:", err);
@@ -71,11 +78,29 @@ function CreateTrip() {
     redirectUri: "http://localhost:5173", // must match Google console
   });
 
+  // ✅ Logout + revoke
+  const handleLogout = async () => {
+    try {
+      if (token) {
+        await axios.get(
+          `https://accounts.google.com/o/oauth2/revoke?token=${token}`
+        );
+        console.log("Google access revoked");
+      }
+    } catch (err) {
+      console.error("Error revoking token:", err);
+    } finally {
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      setUser(null);
+      setToken(null);
+      setTripPlan(null);
+      toast.success("You have been logged out.");
+    }
+  };
+
   // ✅ Generate Trip Plan
   const OnGenerateTrip = async () => {
-    const user = localStorage.getItem("user"); // ✅ fixed
-
-    // Show login dialog if user not found
     if (!user) {
       setOpenDialog(true);
       return;
@@ -101,8 +126,10 @@ function CreateTrip() {
       return;
     }
 
-    const Final_Prompt = AI_PROMPT
-      .replace("{location}", formData?.destination)
+    const Final_Prompt = AI_PROMPT.replace(
+      "{location}",
+      formData?.destination
+    )
       .replace("{totalDays}", formData?.noOfDays)
       .replace("{traveller}", formData?.traveller)
       .replace("{budget}", formData?.budget);
@@ -128,7 +155,22 @@ function CreateTrip() {
 
   return (
     <div className="sm:px-10 md:px-32 lg:px-56 xl:px-10 px-5 mt-10">
-      <h2 className="font-bold text-3xl">Customize your travel experience 🏕️🌴</h2>
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <h2 className="font-bold text-3xl">
+          Customize your travel experience 🏕️🌴
+        </h2>
+
+        {/* {user && (
+          <Button
+            onClick={handleLogout}
+            className="bg-gray-600 text-white hover:bg-gray-700"
+          >
+            Logout
+          </Button>
+        )} */}
+      </div>
+
       <p className="mt-3 text-gray-500 text-xl">
         Just provide some basic information, and our trip planner will create a
         personalized travel plan for you—tailored to your interests, budget, and
@@ -219,7 +261,7 @@ function CreateTrip() {
       </div>
 
       {/* Generate button */}
-      <div className="mt-10 mb-10 justify-end flex">
+      <div className="mt-10 mb-10 justify-end flex gap-x-4">
         <Button
           onClick={OnGenerateTrip}
           disabled={loading}
@@ -229,15 +271,23 @@ function CreateTrip() {
         >
           {loading ? "Generating..." : "Generate Trip"}
         </Button>
+          {user && (
+          <Button
+            onClick={handleLogout}
+            className="bg-gray-600  text-white hover:bg-gray-700"
+          >
+            Logout
+          </Button>
+        )}
       </div>
 
-      {/* Show result */}
+      {/* Show result
       {tripPlan && (
         <div className="mt-10 p-5 border rounded-lg shadow-md bg-white">
           <h2 className="font-bold text-2xl mb-3">Your Trip Plan ✈️</h2>
           <pre className="whitespace-pre-wrap text-gray-700">{tripPlan}</pre>
         </div>
-      )}
+      )} */}
 
       {/* Login Required Dialog */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
@@ -251,7 +301,10 @@ function CreateTrip() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button onClick={login} className="w-full mt-5 flex gap-4 items-center">
+            <Button
+              onClick={login}
+              className="w-full mt-5 flex gap-4 items-center"
+            >
               <FcGoogle className="h-7 w-7" /> Sign In With Google
             </Button>
           </DialogFooter>
