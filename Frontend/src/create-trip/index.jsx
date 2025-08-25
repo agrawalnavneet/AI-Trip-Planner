@@ -4,6 +4,7 @@ import GooglePlacesAutocomplete from "react-google-places-autocomplete";
 import { AI_PROMPT, SelectBugetOption, SelectTravel } from "@/constant/options";
 import { toast } from "sonner";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import {
   Dialog,
   DialogContent,
@@ -16,16 +17,20 @@ import { FcGoogle } from "react-icons/fc";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 
+// 🔥 Firestore imports (make sure you have a firebase.js that exports db)
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "@/service/firebase";
+
 function CreateTrip() {
   const [place, setPlace] = useState();
   const [formData, setFormData] = useState({});
   const [openDialog, setOpenDialog] = useState(false);
   const [tripPlan, setTripPlan] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(
     JSON.parse(localStorage.getItem("user")) || null
   );
   const [token, setToken] = useState(localStorage.getItem("token") || null);
+  const [loading, setLoading] = useState(false);
 
   // ✅ Gemini setup (flash model)
   const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
@@ -99,6 +104,22 @@ function CreateTrip() {
     }
   };
 
+  // ✅ Save Trip to Firestore
+  const SaveAiTrip = async (TripData) => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user"));
+      const docId = Date.now().toString();
+      await setDoc(doc(db, "AiTrips", docId), {
+        userSelection: formData,
+        tripData: TripData,
+        userEmail: user?.email,
+        id: docId,
+      });
+    } catch (error) {
+      console.error("Error saving trip:", error);
+    }
+  };
+
   // ✅ Generate Trip Plan
   const OnGenerateTrip = async () => {
     if (!user) {
@@ -126,21 +147,18 @@ function CreateTrip() {
       return;
     }
 
-    const Final_Prompt = AI_PROMPT.replace(
-      "{location}",
-      formData?.destination
-    )
+    const Final_Prompt = AI_PROMPT
+      .replace("{location}", formData?.destination)
       .replace("{totalDays}", formData?.noOfDays)
       .replace("{traveller}", formData?.traveller)
       .replace("{budget}", formData?.budget);
 
-    console.log("Prompt:", Final_Prompt);
-
     try {
       const result = await model.generateContent(Final_Prompt);
-      const response = result.response.text();
-      console.log("Gemini response:", response);
+      const response = await result.response.text();
+      await SaveAiTrip(response);
       setTripPlan(response);
+      console.log("Gemini response:", response);
     } catch (error) {
       console.error("Error generating trip:", error);
       if (error.message.includes("429")) {
@@ -160,15 +178,6 @@ function CreateTrip() {
         <h2 className="font-bold text-3xl">
           Customize your travel experience 🏕️🌴
         </h2>
-
-        {/* {user && (
-          <Button
-            onClick={handleLogout}
-            className="bg-gray-600 text-white hover:bg-gray-700"
-          >
-            Logout
-          </Button>
-        )} */}
       </div>
 
       <p className="mt-3 text-gray-500 text-xl">
@@ -189,7 +198,10 @@ function CreateTrip() {
               value: place,
               onChange: (v) => {
                 setPlace(v);
-                handleInputChange("destination", v.label || v.value?.description);
+                handleInputChange(
+                  "destination",
+                  v.label || v.value?.description
+                );
               },
             }}
           />
@@ -269,25 +281,30 @@ function CreateTrip() {
             loading ? "opacity-50 cursor-not-allowed" : ""
           }`}
         >
-          {loading ? "Generating..." : "Generate Trip"}
+          {loading ? (
+            <AiOutlineLoading3Quarters className="h-7 w-7 animate-spin" />
+          ) : (
+            "Generate Trip"
+          )}
         </Button>
-          {user && (
+
+        {user && (
           <Button
             onClick={handleLogout}
-            className="bg-gray-600  text-white hover:bg-gray-700"
+            className="bg-gray-600 text-white hover:bg-gray-700"
           >
             Logout
           </Button>
         )}
       </div>
 
-      {/* Show result
+      {/* Show result */}
       {tripPlan && (
         <div className="mt-10 p-5 border rounded-lg shadow-md bg-white">
           <h2 className="font-bold text-2xl mb-3">Your Trip Plan ✈️</h2>
           <pre className="whitespace-pre-wrap text-gray-700">{tripPlan}</pre>
         </div>
-      )} */}
+      )}
 
       {/* Login Required Dialog */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
@@ -302,6 +319,7 @@ function CreateTrip() {
           </DialogHeader>
           <DialogFooter>
             <Button
+              disabled={loading}
               onClick={login}
               className="w-full mt-5 flex gap-4 items-center"
             >
