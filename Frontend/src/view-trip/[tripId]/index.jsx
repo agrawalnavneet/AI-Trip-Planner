@@ -3,6 +3,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/service/firebase";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import InfoSection from "../component/InfoSection";
 
 function ViewTrip() {
   const { tripId } = useParams();
@@ -37,7 +38,7 @@ function ViewTrip() {
 
   return (
     <div className="p-10 md: px-20 lg:px-44 xl:px-56 ">
-     Information
+     <InfoSection trip={trip} />
     </div>
   );
 }
