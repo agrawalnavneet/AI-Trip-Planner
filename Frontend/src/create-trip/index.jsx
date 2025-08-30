@@ -20,6 +20,7 @@ import axios from "axios";
 // 🔥 Firestore imports (make sure you have a firebase.js that exports db)
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/service/firebase";
+import { useNavigate } from "react-router-dom";
 
 function CreateTrip() {
   const [place, setPlace] = useState();
@@ -31,7 +32,7 @@ function CreateTrip() {
   );
   const [token, setToken] = useState(localStorage.getItem("token") || null);
   const [loading, setLoading] = useState(false);
-
+const navigate = useNavigate();
   // ✅ Gemini setup (flash model)
   const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -115,9 +116,11 @@ function CreateTrip() {
         userEmail: user?.email,
         id: docId,
       });
+       navigate(`/view-trip/${docId}`);
     } catch (error) {
       console.error("Error saving trip:", error);
     }
+    
   };
 
   // ✅ Generate Trip Plan
